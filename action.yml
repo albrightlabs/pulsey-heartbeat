@@ -1,0 +1,51 @@
+name: Pulsey Heartbeat
+description: Tell Pulsey your workflow ran, or report that it failed so you're alerted right away.
+author: Albright Labs
+branding:
+  icon: activity
+  color: green
+
+inputs:
+  url:
+    description: The heartbeat URL from Pulsey, e.g. https://pulseyapp.com/heartbeat/<uuid>. Store it as a secret.
+    required: true
+  status:
+    description: success, failure or cancelled. Pass ${{ job.status }} to report the job's result.
+    required: false
+    default: success
+  message:
+    description: Message sent with a failure. Defaults to a link to the workflow run.
+    required: false
+    default: ''
+  report-cancelled:
+    description: Report cancelled runs as failures ("true") instead of skipping them.
+    required: false
+    default: 'false'
+  retries:
+    description: How many times to retry if Pulsey can't be reached.
+    required: false
+    default: '3'
+  timeout:
+    description: Seconds to wait for each attempt.
+    required: false
+    default: '10'
+
+outputs:
+  http-status:
+    description: The HTTP status Pulsey returned, or empty when nothing was sent.
+    value: ${{ steps.ping.outputs.http-status }}
+
+runs:
+  using: composite
+  steps:
+    - id: ping
+      shell: bash
+      env:
+        PULSEY_URL: ${{ inputs.url }}
+        PULSEY_STATUS: ${{ inputs.status }}
+        PULSEY_MESSAGE: ${{ inputs.message }}
+        PULSEY_REPORT_CANCELLED: ${{ inputs.report-cancelled }}
+        PULSEY_RETRIES: ${{ inputs.retries }}
+        PULSEY_TIMEOUT: ${{ inputs.timeout }}
+        PULSEY_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: '"$GITHUB_ACTION_PATH/ping.sh"'

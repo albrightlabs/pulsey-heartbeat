@@ -1,0 +1,30 @@
+name: Test
+on:
+  push:
+  pull_request:
+jobs:
+  script:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./test/test.sh
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start a mock Pulsey
+        run: |
+          python3 test/mock_server.py 18080 "$RUNNER_TEMP/requests.log" &
+          sleep 1
+      - uses: ./
+        id: heartbeat
+        with:
+          url: http://127.0.0.1:18080/heartbeat/2f1c9b7e-0000-4000-8000-000000000001
+          status: failure
+          message: Self-test
+      - run: |
+          test "${{ steps.heartbeat.outputs.http-status }}" = "200"
+          grep -q '/fail' "$RUNNER_TEMP/requests.log"
